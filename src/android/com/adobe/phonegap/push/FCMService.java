@@ -188,8 +188,8 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
     /*
      * Replace alternate keys with our canonical value
      */
-    private String normalizeKey(String key, String messageKey, String titleKey) {
-        if (key.equals(BODY) || key.equals(ALERT) || key.equals(MP_MESSAGE) || key.equals(GCM_NOTIFICATION_BODY) || key.equals(TWILIO_BODY) || key.equals(messageKey)) {
+    private String normalizeKey(String key, String messageKey, String titleKey, Bundle newExtras) {
+        if (key.equals(BODY) || key.equals(ALERT) || key.equals(MP_MESSAGE) || key.equals(GCM_NOTIFICATION_BODY) || key.equals(TWILIO_BODY) || key.equals(messageKey) || key.equals(AWS_PINPOINT_BODY)) {
             return MESSAGE;
         } else if (key.equals(TWILIO_TITLE) || key.equals(SUBJECT) || key.equals(titleKey)) {
             return TITLE;
@@ -197,6 +197,9 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
             return COUNT;
         } else if (key.equals(SOUNDNAME) || key.equals(TWILIO_SOUND)) {
             return SOUND;
+        } else if (key.equals(AWS_PINPOINT_PICTURE)) {
+            newExtras.putString(STYLE, STYLE_PICTURE);
+            return PICTURE;
         } else if (key.startsWith(GCM_NOTIFICATION)) {
             return key.substring(GCM_NOTIFICATION.length()+1, key.length());
         } else if (key.startsWith(GCM_N)) {
@@ -204,6 +207,8 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
         } else if (key.startsWith(UA_PREFIX)) {
             key = key.substring(UA_PREFIX.length()+1, key.length());
             return key.toLowerCase();
+        } else if (key.startsWith(AWS_PINPOINT_PREFIX)) {
+            return key.substring(AWS_PINPOINT_PREFIX.length() + 1, key.length());
         } else {
             return key;
         }
@@ -241,7 +246,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
                                 Log.d(LOG_TAG, "key = data/" + jsonKey);
 
                                 String value = data.getString(jsonKey);
-                                jsonKey = normalizeKey(jsonKey, messageKey, titleKey);
+                                jsonKey = normalizeKey(jsonKey, messageKey, titleKey, newExtras);
                                 value = localizeKey(context, jsonKey, value);
 
                                 newExtras.putString(jsonKey, value);
@@ -251,7 +256,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
                         Log.e(LOG_TAG, "normalizeExtras: JSON exception");
                     }
                 } else {
-                    String newKey = normalizeKey(key, messageKey, titleKey);
+                    String newKey = normalizeKey(key, messageKey, titleKey, newExtras);
                     Log.d(LOG_TAG, "replace key " + key + " with " + newKey);
                     replaceKey(context, key, newKey, extras, newExtras);
                 }
@@ -262,7 +267,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
                     String notifkey = iterator.next();
 
                     Log.d(LOG_TAG, "notifkey = " + notifkey);
-                    String newKey = normalizeKey(notifkey, messageKey, titleKey);
+                    String newKey = normalizeKey(notifkey, messageKey, titleKey, newExtras);
                     Log.d(LOG_TAG, "replace key " + notifkey + " with " + newKey);
 
                     String valueData = value.getString(notifkey);
@@ -277,7 +282,7 @@ public class FCMService extends FirebaseMessagingService implements PushConstant
             // with the other "message" key (holding the body of the payload)
             // See issue #1663
             } else {
-                String newKey = normalizeKey(key, messageKey, titleKey);
+                String newKey = normalizeKey(key, messageKey, titleKey, newExtras);
                 Log.d(LOG_TAG, "replace key " + key + " with " + newKey);
                 replaceKey(context, key, newKey, extras, newExtras);
             }
